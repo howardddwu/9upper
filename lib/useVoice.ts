@@ -1,79 +1,114 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { VoiceLang } from './settings'
 
-/**
- * Pick the best available TTS voice for a given language code.
- * Strict: never let zh-TW/zh-CN fall back to zh-HK (Cantonese), and vice versa.
- */
-function pickVoice(
-  voices: SpeechSynthesisVoice[],
-  lang: VoiceLang,
-): SpeechSynthesisVoice | undefined {
-  if (voices.length === 0) return undefined
+// ─── Module-level blob cache ──────────────────────────────────────────────────
+// Keyed by "lang:text" so the same phrase is only fetched once per session.
+const blobCache = new Map<string, Blob>()
 
-  // 1. Exact lang match  (e.g. "zh-HK" === "zh-HK")
-  const exact = voices.find(v => v.lang === lang)
-  if (exact) return exact
+async function fetchSpeech(text: string, lang: VoiceLang): Promise<Blob> {
+  const key = `${lang}:${text}`
+  const hit = blobCache.get(key)
+  if (hit) return hit
 
-  // 2. Prefix match      (e.g. "zh-HK-Sinji" starts with "zh-HK")
-  const prefix = voices.find(v => v.lang.startsWith(lang))
-  if (prefix) return prefix
+  const res = await fetch('/api/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, lang }),
+  })
 
-  // 3. No acceptable fallback — return undefined so we still set utterance.lang
-  //    and let the browser try. Do NOT cross zh-HK ↔ zh-TW/CN boundaries.
-  return undefined
+  if (!res.ok) throw new Error(`TTS API responded ${res.status}`)
+
+  const blob = await res.blob()
+  blobCache.set(key, blob)
+  return blob
 }
+
+// Fallback: system Web Speech API (used when cloud TTS is unavailable)
+function systemSpeak(text: string, lang: VoiceLang) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return
+  window.speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(text)
+  u.lang = lang
+  u.rate = 0.88
+  window.speechSynthesis.speak(u)
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useVoice(lang: VoiceLang = 'zh-TW') {
   const [isMuted, setIsMuted] = useState(false)
   const isMutedRef = useRef(false)
 
-  // Keep voices in a ref (updated by voiceschanged) so speak() always uses the
-  // latest list without needing it as a dependency.
-  const voicesRef = useRef<SpeechSynthesisVoice[]>([])
+  // Always points to the currently-playing <audio>, or null
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
-    const load = () => {
-      voicesRef.current = window.speechSynthesis.getVoices()
+  // Incremented on every new speak() call so stale async results are ignored
+  const speakIdRef = useRef(0)
+
+  const _stop = useCallback(() => {
+    speakIdRef.current++
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.src = ''
+      audioRef.current = null
     }
-    load()
-    window.speechSynthesis.addEventListener('voiceschanged', load)
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', load)
-  }, [])
-
-  const speak = useCallback(
-    (text: string) => {
-      if (isMutedRef.current) return
-      if (typeof window === 'undefined' || !window.speechSynthesis) return
-
-      window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = lang        // always set as baseline
-      utterance.rate = 0.88
-      utterance.pitch = 1.05
-
-      const voice = pickVoice(voicesRef.current, lang)
-      if (voice) utterance.voice = voice  // explicit voice overrides browser default
-
-      window.speechSynthesis.speak(utterance)
-    },
-    [lang], // recreated whenever lang changes
-  )
-
-  const stop = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
     }
   }, [])
 
+  const speak = useCallback(
+    async (text: string) => {
+      if (isMutedRef.current) return
+
+      // Stop whatever is currently playing
+      _stop()
+
+      const id = ++speakIdRef.current
+
+      try {
+        const blob = await fetchSpeech(text, lang)
+
+        // If a newer speak() was called while we were fetching, bail out
+        if (speakIdRef.current !== id) return
+
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audioRef.current = audio
+
+        audio.onended = () => {
+          URL.revokeObjectURL(url)
+          if (audioRef.current === audio) audioRef.current = null
+        }
+
+        await audio.play()
+      } catch (err) {
+        if (speakIdRef.current !== id) return
+        // Cloud TTS unavailable — fall back to whatever the browser has
+        console.warn('[useVoice] cloud TTS failed, using Web Speech API:', err)
+        systemSpeak(text, lang)
+      }
+    },
+    [lang, _stop],
+  )
+
+  const stop = _stop
+
   const toggleMute = useCallback(() => {
     setIsMuted(prev => {
       const next = !prev
       isMutedRef.current = next
-      if (next) window.speechSynthesis?.cancel()
+      if (next) {
+        speakIdRef.current++
+        if (audioRef.current) {
+          audioRef.current.pause()
+          audioRef.current.src = ''
+          audioRef.current = null
+        }
+        window.speechSynthesis?.cancel()
+      }
       return next
     })
   }, [])
