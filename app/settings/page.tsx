@@ -14,31 +14,28 @@ const TEST_PHRASES: Record<VoiceLang, string> = {
   'zh-HK': '你好，呢個係粵語測試。',
 }
 
-// Play a cloud-TTS test clip; falls back to system speech if API unavailable
-async function testVoiceCloud(lang: VoiceLang) {
-  const text = TEST_PHRASES[lang]
-  try {
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, lang }),
-    })
-    if (!res.ok) throw new Error('api error')
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const audio = new Audio(url)
-    audio.onended = () => URL.revokeObjectURL(url)
-    await audio.play()
-  } catch {
-    // Fallback: system TTS
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel()
-      const u = new SpeechSynthesisUtterance(text)
-      u.lang = lang
-      u.rate = 0.88
-      window.speechSynthesis.speak(u)
-    }
-  }
+// Mirrors the pickVoice() logic in useVoice.ts — must stay in sync.
+function pickVoice(voices: SpeechSynthesisVoice[], lang: VoiceLang) {
+  if (voices.length === 0) return undefined
+  const norm = (s: string) => s.replace(/_/g, '-').toLowerCase()
+  const target = norm(lang)
+  return (
+    voices.find(v => norm(v.lang) === target) ??
+    voices.find(v => norm(v.lang).startsWith(target))
+  )
+}
+
+// Play using the same voice selection strategy as the game itself.
+function testVoice(lang: VoiceLang) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return
+  const voices = window.speechSynthesis.getVoices()
+  window.speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(TEST_PHRASES[lang])
+  u.lang = lang
+  u.rate = 0.88
+  const voice = pickVoice(voices, lang)
+  if (voice) u.voice = voice
+  window.speechSynthesis.speak(u)
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -76,7 +73,12 @@ function OptionGroup<T extends string>({
             </div>
           </button>
           {opt.onTest && !opt.disabled && (
-            <button onClick={opt.onTest} title="試聽" className="w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 text-base transition-all active:scale-90" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
+            <button
+              onClick={opt.onTest}
+              title="試聽"
+              className="w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 text-base transition-all active:scale-90"
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}
+            >
               🔊
             </button>
           )}
@@ -94,44 +96,69 @@ function SectionLabel({ label }: { label: string }) {
   )
 }
 
-// ─── Voice status panel ───────────────────────────────────────────────────────
-// Shows whether cloud TTS is available (and optionally which system voices exist)
+// ─── Voice diagnostic ─────────────────────────────────────────────────────────
+// Shows which system voice will actually be used for each language option.
 
-function VoiceStatus() {
-  const [status, setStatus] = useState<'checking' | 'ok' | 'fallback'>('checking')
+const LANG_ROWS: { lang: VoiceLang; label: string }[] = [
+  { lang: 'zh-TW', label: '國語（台灣）' },
+  { lang: 'zh-CN', label: '普通話（中國）' },
+  { lang: 'zh-HK', label: '粵語（香港）' },
+]
+
+function VoiceDiagnostic() {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Quick ping to check if the TTS API is configured
-    fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '測試', lang: 'zh-TW' }),
-    })
-      .then(r => setStatus(r.ok ? 'ok' : 'fallback'))
-      .catch(() => setStatus('fallback'))
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    const load = () => { setVoices(window.speechSynthesis.getVoices()); setReady(true) }
+    load()
+    window.speechSynthesis.addEventListener('voiceschanged', load)
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', load)
   }, [])
 
-  if (status === 'checking') return null
-
-  if (status === 'ok') {
-    return (
-      <div className="rounded-xl px-4 py-3 border flex items-center gap-3" style={{ background: 'rgba(46,204,113,0.07)', borderColor: 'rgba(46,204,113,0.3)' }}>
-        <span className="text-xl">✅</span>
-        <div>
-          <p className="text-sm font-semibold" style={{ color: 'var(--color-realupper)' }}>雲端語音已啟用</p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>語音由雲端生成，無需安裝系統聲音，所有用戶皆可正常使用。</p>
-        </div>
-      </div>
-    )
-  }
+  if (!ready) return null
 
   return (
-    <div className="rounded-xl px-4 py-3 border flex items-center gap-3" style={{ background: 'rgba(244,162,97,0.08)', borderColor: 'rgba(244,162,97,0.4)' }}>
-      <span className="text-xl">⚠️</span>
-      <div>
-        <p className="text-sm font-semibold" style={{ color: 'var(--color-primary)' }}>使用系統語音（備援）</p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>雲端語音 API 未設定。語音品質取決於系統安裝的聲音。</p>
-      </div>
+    <div className="flex flex-col gap-2">
+      {LANG_ROWS.map(({ lang, label }) => {
+        const matched = pickVoice(voices, lang)
+        return (
+          <div
+            key={lang}
+            className="rounded-xl px-4 py-3 border flex items-center justify-between gap-3"
+            style={{
+              background: 'var(--bg-card)',
+              borderColor: matched ? 'var(--color-border)' : 'rgba(230,57,70,0.3)',
+            }}
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{label}</p>
+              <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-muted)' }}>
+                {matched
+                  ? `${matched.name} (${matched.lang})`
+                  : '未找到匹配聲音'}
+              </p>
+            </div>
+            {matched ? (
+              <button
+                onClick={() => testVoice(lang)}
+                className="flex-shrink-0 text-xs px-3 py-1 rounded-lg border transition-all active:scale-90"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
+              >
+                🔊
+              </button>
+            ) : (
+              <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(230,57,70,0.1)', color: 'var(--color-nipper)' }}>
+                ✗ 未安裝
+              </span>
+            )}
+          </div>
+        )
+      })}
+      <p className="text-xs mt-1 leading-5" style={{ color: 'var(--color-muted)' }}>
+        如剛安裝新聲音後未顯示，請重啟瀏覽器再重新整理此頁。
+      </p>
     </div>
   )
 }
@@ -161,9 +188,9 @@ export default function SettingsPage() {
   ]
 
   const voiceLangOptions: OptionItem<VoiceLang>[] = [
-    { value: 'zh-TW', label: t(lang, 'voiceZhTW'), onTest: () => testVoiceCloud('zh-TW') },
-    { value: 'zh-CN', label: t(lang, 'voiceZhCN'), onTest: () => testVoiceCloud('zh-CN') },
-    { value: 'zh-HK', label: t(lang, 'voiceZhHK'), onTest: () => testVoiceCloud('zh-HK') },
+    { value: 'zh-TW', label: t(lang, 'voiceZhTW'), onTest: () => testVoice('zh-TW') },
+    { value: 'zh-CN', label: t(lang, 'voiceZhCN'), onTest: () => testVoice('zh-CN') },
+    { value: 'zh-HK', label: t(lang, 'voiceZhHK'), onTest: () => testVoice('zh-HK') },
   ]
 
   return (
@@ -184,10 +211,9 @@ export default function SettingsPage() {
         <SectionLabel label={t(lang, 'voiceLabel')} />
         <OptionGroup options={voiceLangOptions} value={settings.voiceLang} onChange={v => update({ voiceLang: v as VoiceLang })} />
 
-        {/* 語音狀態 */}
-        <div className="mt-3">
-          <VoiceStatus />
-        </div>
+        {/* 語音診斷：顯示每個語言實際對應的系統聲音 */}
+        <SectionLabel label="語音診斷" />
+        <VoiceDiagnostic />
 
         <SectionLabel label={t(lang, 'advancedLabel')} />
         <div className="rounded-xl px-4 py-4 border text-sm text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
