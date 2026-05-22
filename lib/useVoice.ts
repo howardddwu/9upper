@@ -1,10 +1,10 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
+import { VoiceLang } from './settings'
 
-export function useVoice() {
+export function useVoice(lang: VoiceLang = 'zh-TW') {
   const [isMuted, setIsMuted] = useState(false)
-  // Use a ref so speak() stays stable (no dep on isMuted)
   const isMutedRef = useRef(false)
 
   const speak = useCallback((text: string) => {
@@ -12,11 +12,11 @@ export function useVoice() {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'zh-TW'
+    utterance.lang = lang
     utterance.rate = 0.88
     utterance.pitch = 1.05
     window.speechSynthesis.speak(utterance)
-  }, [])
+  }, [lang])
 
   const stop = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
