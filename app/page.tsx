@@ -1,65 +1,77 @@
-import Image from "next/image";
+import Link from 'next/link'
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-svh flex flex-col items-center justify-center px-4 py-12" style={{ background: 'var(--bg-deep)' }}>
+      <div className="w-full max-w-md mx-auto flex flex-col items-center gap-8">
+
+        {/* Logo */}
+        <div className="text-center">
+          <div className="text-xs font-semibold tracking-[0.3em] mb-2" style={{ color: 'var(--color-primary)' }}>
+            9UPPER
+          </div>
+          <h1 className="text-6xl font-black tracking-tight" style={{ color: 'var(--color-text)' }}>
+            瞎掰王
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-3 text-base" style={{ color: 'var(--color-muted)' }}>
+            每個人都在說話，但誰在說真話？
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Role Cards */}
+        <div className="w-full grid grid-cols-3 gap-3">
+          <div className="rounded-2xl p-4 flex flex-col items-center gap-2 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
+            <div className="text-3xl">🤔</div>
+            <div className="text-xs font-bold" style={{ color: 'var(--color-guesser)' }}>想想</div>
+            <div className="text-xs text-center leading-4" style={{ color: 'var(--color-muted)' }}>找出老實人</div>
+          </div>
+          <div className="rounded-2xl p-4 flex flex-col items-center gap-2 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
+            <div className="text-3xl">✅</div>
+            <div className="text-xs font-bold" style={{ color: 'var(--color-realupper)' }}>老實人</div>
+            <div className="text-xs text-center leading-4" style={{ color: 'var(--color-muted)' }}>說真話，但別太明顯</div>
+          </div>
+          <div className="rounded-2xl p-4 flex flex-col items-center gap-2 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
+            <div className="text-3xl">😈</div>
+            <div className="text-xs font-bold" style={{ color: 'var(--color-nipper)' }}>瞎掰人</div>
+            <div className="text-xs text-center leading-4" style={{ color: 'var(--color-muted)' }}>一本正經胡說八道</div>
+          </div>
         </div>
-      </main>
+
+        {/* How to play */}
+        <div className="w-full rounded-2xl p-5 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
+          <h2 className="font-bold mb-3 text-sm" style={{ color: 'var(--color-primary)' }}>遊戲方式</h2>
+          <ol className="space-y-2">
+            {[
+              '你是「想想」，負責找出說真話的老實人',
+              '翻開題目卡，上面有個冷知識詞彙',
+              '四位 AI 玩家輪流說出對這個詞彙的解釋',
+              '其中一位說的是真話，三位在胡說八道',
+              '聽完後，投票選出你認為的老實人',
+              '猜對得 2 分，共 5 回合，看看你能得幾分！',
+            ].map((step, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm" style={{ color: 'var(--color-muted)' }}>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>
+                  {i + 1}
+                </span>
+                {step}
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {/* Start Button */}
+        <Link
+          href="/game"
+          className="w-full py-4 rounded-2xl text-center font-black text-lg transition-all active:scale-95"
+          style={{ background: 'var(--color-primary)', color: '#0f0e17' }}
+        >
+          開始遊戲
+        </Link>
+
+        <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+          共 5 回合 · 由 AI 扮演其他玩家
+        </p>
+      </div>
     </div>
-  );
+  )
 }
