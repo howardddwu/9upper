@@ -108,10 +108,18 @@ const LANG_ROWS: { lang: VoiceLang; label: string }[] = [
 function VoiceDiagnostic() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [ready, setReady] = useState(false)
+  const [showRaw, setShowRaw] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
-    const load = () => { setVoices(window.speechSynthesis.getVoices()); setReady(true) }
+    const load = () => {
+      const v = window.speechSynthesis.getVoices()
+      setVoices(v)
+      setReady(true)
+      // Log everything so we can debug in DevTools
+      console.log('[VoiceDiagnostic] All voices:', v.map(x => `${x.name} | ${x.lang}`))
+      console.log('[VoiceDiagnostic] zh-* voices:', v.filter(x => x.lang.toLowerCase().startsWith('zh')).map(x => `${x.name} | ${x.lang}`))
+    }
     load()
     window.speechSynthesis.addEventListener('voiceschanged', load)
     return () => window.speechSynthesis.removeEventListener('voiceschanged', load)
@@ -119,8 +127,12 @@ function VoiceDiagnostic() {
 
   if (!ready) return null
 
+  // ALL voices whose lang starts with "zh" (any casing / separator)
+  const zhVoices = voices.filter(v => v.lang.toLowerCase().startsWith('zh'))
+
   return (
     <div className="flex flex-col gap-2">
+      {/* Per-language match result */}
       {LANG_ROWS.map(({ lang, label }) => {
         const matched = pickVoice(voices, lang)
         return (
@@ -135,9 +147,7 @@ function VoiceDiagnostic() {
             <div className="min-w-0">
               <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{label}</p>
               <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-muted)' }}>
-                {matched
-                  ? `${matched.name} (${matched.lang})`
-                  : '未找到匹配聲音'}
+                {matched ? `${matched.name} (${matched.lang})` : '未找到匹配聲音'}
               </p>
             </div>
             {matched ? (
@@ -150,15 +160,47 @@ function VoiceDiagnostic() {
               </button>
             ) : (
               <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(230,57,70,0.1)', color: 'var(--color-nipper)' }}>
-                ✗ 未安裝
+                ✗ 未匹配
               </span>
             )}
           </div>
         )
       })}
-      <p className="text-xs mt-1 leading-5" style={{ color: 'var(--color-muted)' }}>
-        如剛安裝新聲音後未顯示，請重啟瀏覽器再重新整理此頁。
-      </p>
+
+      {/* Raw voice dump — helps diagnose unexpected lang codes */}
+      <button
+        onClick={() => setShowRaw(v => !v)}
+        className="text-xs text-left mt-1"
+        style={{ color: 'var(--color-primary)' }}
+      >
+        {showRaw ? '▲ 收起' : '▼ 顯示系統偵測到的所有中文聲音'}
+      </button>
+      {showRaw && (
+        <div className="rounded-xl px-4 py-3 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
+          {zhVoices.length === 0 ? (
+            <p className="text-xs" style={{ color: 'var(--color-nipper)' }}>未偵測到任何中文聲音</p>
+          ) : (
+            zhVoices.map(v => (
+              <div key={v.name} className="flex items-center justify-between py-1 border-b last:border-0" style={{ borderColor: 'var(--color-border)' }}>
+                <span className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                  {v.name} <span className="font-mono" style={{ color: 'var(--color-text)' }}>({v.lang})</span>
+                </span>
+                <button
+                  onClick={() => {
+                    window.speechSynthesis.cancel()
+                    const u = new SpeechSynthesisUtterance('測試')
+                    u.voice = v
+                    u.lang = v.lang
+                    window.speechSynthesis.speak(u)
+                  }}
+                  className="text-xs px-2 py-0.5 rounded border ml-2 flex-shrink-0"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
+                >🔊</button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }
