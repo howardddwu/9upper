@@ -6,17 +6,22 @@ import { VoiceLang } from './settings'
 /**
  * Pick the best available TTS voice for a given language code.
  *
- * Why explicit voice selection matters:
- *   Setting utterance.lang alone is unreliable on macOS Chrome —
- *   the browser may ignore it and use the last-used voice (often zh-HK).
- *   We MUST explicitly set utterance.voice when a match is found.
+ * Priority order (highest → lowest):
+ *   1. Classic named voice, exact lang  (e.g. "Meijia | zh-TW")
+ *   2. Classic named voice, prefix lang (e.g. "Meijia | zh-TW-x-…")
+ *   3. Personality-variant voice, exact lang  (e.g. "Eddy (Chinese (Taiwan)) | zh-TW")
+ *   4. Personality-variant voice, prefix lang
  *
- * Why we normalise lang codes:
- *   macOS reports some voices with underscores: "zh_TW", "zh_CN", "zh_HK"
- *   instead of the BCP-47 hyphen form. We normalise both sides before matching.
+ * Why deprioritise personality voices (Eddy, Flo, Grandma, Reed, Rocko,
+ * Sandy, Shelley, Grandpa…)?
+ *   macOS lists these voices even when their voice data is NOT downloaded.
+ *   Selecting an undownloaded personality voice causes macOS to fall back
+ *   silently to whatever the system default is (often zh-HK / Cantonese).
+ *   Classic voices (Meijia, Tingting, Sin-Ji…) only appear once actually
+ *   installed, so they are reliable.
  *
  * Strict boundary rule:
- *   Never cross zh-HK (Cantonese) ↔ zh-TW/zh-CN (Mandarin) even as a fallback.
+ *   Never cross zh-HK (Cantonese) ↔ zh-TW/zh-CN (Mandarin) boundaries.
  */
 function pickVoice(
   voices: SpeechSynthesisVoice[],
@@ -25,17 +30,28 @@ function pickVoice(
   if (voices.length === 0) return undefined
 
   const norm = (s: string) => s.replace(/_/g, '-').toLowerCase()
-  const target = norm(lang) // e.g. "zh-tw"
+  const target = norm(lang)
 
-  // 1. Exact match after normalisation
-  const exact = voices.find(v => norm(v.lang) === target)
-  if (exact) return exact
+  // Personality voices show "Name (Language (Region))" with ASCII parentheses.
+  const isPersonality = (v: SpeechSynthesisVoice) => /\(.*\)/.test(v.name)
 
-  // 2. Prefix match (e.g. "zh-tw-mei-jia" starts with "zh-tw")
-  const prefix = voices.find(v => norm(v.lang).startsWith(target))
-  if (prefix) return prefix
+  // 1. Classic voice, exact lang
+  const classicExact = voices.find(v => !isPersonality(v) && norm(v.lang) === target)
+  if (classicExact) return classicExact
 
-  // 3. No cross-dialect fallback
+  // 2. Classic voice, prefix lang
+  const classicPrefix = voices.find(v => !isPersonality(v) && norm(v.lang).startsWith(target))
+  if (classicPrefix) return classicPrefix
+
+  // 3. Personality voice, exact lang (fallback — data may or may not be present)
+  const personalityExact = voices.find(v => norm(v.lang) === target)
+  if (personalityExact) return personalityExact
+
+  // 4. Personality voice, prefix lang
+  const personalityPrefix = voices.find(v => norm(v.lang).startsWith(target))
+  if (personalityPrefix) return personalityPrefix
+
+  // No cross-dialect fallback
   return undefined
 }
 

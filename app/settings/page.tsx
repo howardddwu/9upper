@@ -19,7 +19,10 @@ function pickVoice(voices: SpeechSynthesisVoice[], lang: VoiceLang) {
   if (voices.length === 0) return undefined
   const norm = (s: string) => s.replace(/_/g, '-').toLowerCase()
   const target = norm(lang)
+  const isPersonality = (v: SpeechSynthesisVoice) => /\(.*\)/.test(v.name)
   return (
+    voices.find(v => !isPersonality(v) && norm(v.lang) === target) ??
+    voices.find(v => !isPersonality(v) && norm(v.lang).startsWith(target)) ??
     voices.find(v => norm(v.lang) === target) ??
     voices.find(v => norm(v.lang).startsWith(target))
   )
