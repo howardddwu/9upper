@@ -29,13 +29,15 @@ function pickVoice(voices: SpeechSynthesisVoice[], lang: VoiceLang) {
 function testVoice(lang: VoiceLang) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return
   const voices = window.speechSynthesis.getVoices()
-  window.speechSynthesis.cancel()
+  const voice = pickVoice(voices, lang)
+  console.log('[testVoice]', { lang, voiceCount: voices.length, picked: voice?.name ?? 'none' })
   const u = new SpeechSynthesisUtterance(TEST_PHRASES[lang])
   u.lang = lang
   u.rate = 0.88
-  const voice = pickVoice(voices, lang)
   if (voice) u.voice = voice
-  window.speechSynthesis.speak(u)
+  // macOS Chrome bug: cancel() → immediate speak() ignores utterance.voice
+  window.speechSynthesis.cancel()
+  setTimeout(() => window.speechSynthesis.speak(u), 150)
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

@@ -61,13 +61,6 @@ export function useVoice(lang: VoiceLang = 'zh-TW') {
       if (isMutedRef.current) return
       if (typeof window === 'undefined' || !window.speechSynthesis) return
 
-      window.speechSynthesis.cancel()
-
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = lang   // baseline — required even when voice is set explicitly
-      utterance.rate = 0.88
-      utterance.pitch = 1.05
-
       // Always try to pull a fresh voice list in case voiceschanged fired late.
       const voices =
         voicesRef.current.length > 0
@@ -75,10 +68,20 @@ export function useVoice(lang: VoiceLang = 'zh-TW') {
           : window.speechSynthesis.getVoices()
 
       const voice = pickVoice(voices, lang)
-      if (voice) utterance.voice = voice   // explicit > lang-hint
 
       console.log('[useVoice] speak', { lang, voices: voices.length, picked: voice?.name ?? 'none', pickedLang: voice?.lang ?? 'none' })
-      window.speechSynthesis.speak(utterance)
+
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = lang   // baseline — required even when voice is set explicitly
+      utterance.rate = 0.88
+      utterance.pitch = 1.05
+      if (voice) utterance.voice = voice   // explicit > lang-hint
+
+      // macOS Chrome bug: calling cancel() and immediately speak() causes the
+      // browser to ignore utterance.voice and fall back to the system default.
+      // Wrapping speak() in a short setTimeout lets cancel() fully flush first.
+      window.speechSynthesis.cancel()
+      setTimeout(() => window.speechSynthesis.speak(utterance), 150)
     },
     [lang],
   )
