@@ -88,8 +88,6 @@ export function useVoice(lang: VoiceLang = 'zh-TW') {
 
       const voice = pickVoice(voices, lang)
 
-      console.log('[useVoice] speak', { lang, voices: voices.length, picked: voice?.name ?? 'none', pickedLang: voice?.lang ?? 'none' })
-
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = lang   // baseline — required even when voice is set explicitly
       utterance.rate = 0.88

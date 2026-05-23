@@ -35,7 +35,6 @@ function testVoice(lang: VoiceLang) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return
   const voices = window.speechSynthesis.getVoices()
   const voice = pickVoice(voices, lang)
-  console.log('[testVoice]', { lang, voiceCount: voices.length, picked: voice?.name ?? 'none' })
   const u = new SpeechSynthesisUtterance(TEST_PHRASES[lang])
   u.lang = lang
   u.rate = 0.88
@@ -116,22 +115,12 @@ function VoiceDiagnostic() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [ready, setReady] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
-  const [storedJson, setStoredJson] = useState<string>('')
-
-  useEffect(() => {
-    // Show raw localStorage so we can see exactly what's saved
-    setStoredJson(localStorage.getItem('9upper-settings') ?? '(empty)')
-  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
     const load = () => {
-      const v = window.speechSynthesis.getVoices()
-      setVoices(v)
+      setVoices(window.speechSynthesis.getVoices())
       setReady(true)
-      // Log everything so we can debug in DevTools
-      console.log('[VoiceDiagnostic] All voices:', v.map(x => `${x.name} | ${x.lang}`))
-      console.log('[VoiceDiagnostic] zh-* voices:', v.filter(x => x.lang.toLowerCase().startsWith('zh')).map(x => `${x.name} | ${x.lang}`))
     }
     load()
     window.speechSynthesis.addEventListener('voiceschanged', load)
@@ -181,11 +170,6 @@ function VoiceDiagnostic() {
       })}
 
       {/* Raw voice dump — helps diagnose unexpected lang codes */}
-      {/* Raw localStorage dump — pinpoints whether the saved voiceLang is wrong */}
-      <div className="rounded-xl px-4 py-3 border font-mono text-xs break-all" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
-        <span style={{ color: 'var(--color-primary)' }}>localStorage: </span>{storedJson}
-      </div>
-
       <button
         onClick={() => setShowRaw(v => !v)}
         className="text-xs text-left mt-1"
