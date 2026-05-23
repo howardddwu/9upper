@@ -7,18 +7,17 @@ import { VoiceLang } from './settings'
  * Pick the best available TTS voice for a given language code.
  *
  * Priority order (highest → lowest):
- *   1. Classic named voice, exact lang  (e.g. "Meijia | zh-TW")
- *   2. Classic named voice, prefix lang (e.g. "Meijia | zh-TW-x-…")
- *   3. Personality-variant voice, exact lang  (e.g. "Eddy (Chinese (Taiwan)) | zh-TW")
- *   4. Personality-variant voice, prefix lang
+ *   1. Google built-in voice, exact lang  — Chrome's own voices always work in Chrome
+ *   2. Classic system voice, exact lang   — e.g. "Meijia | zh-TW" (if actually installed)
+ *   3. Classic system voice, prefix lang
+ *   4. Personality-variant voice, exact lang  — e.g. "Eddy (Chinese (Taiwan))"
+ *   5. Personality-variant voice, prefix lang
  *
- * Why deprioritise personality voices (Eddy, Flo, Grandma, Reed, Rocko,
- * Sandy, Shelley, Grandpa…)?
- *   macOS lists these voices even when their voice data is NOT downloaded.
- *   Selecting an undownloaded personality voice causes macOS to fall back
- *   silently to whatever the system default is (often zh-HK / Cantonese).
- *   Classic voices (Meijia, Tingting, Sin-Ji…) only appear once actually
- *   installed, so they are reliable.
+ * Why prefer Google voices?
+ *   Chrome on macOS sometimes silently ignores utterance.voice when set to a
+ *   system (macOS) voice — falling back to the OS default (often zh-HK).
+ *   Chrome's own Google voices (Google 國語（臺灣）, Google 普通话, etc.) are
+ *   handled internally by Chrome and are always honoured.
  *
  * Strict boundary rule:
  *   Never cross zh-HK (Cantonese) ↔ zh-TW/zh-CN (Mandarin) boundaries.
@@ -32,24 +31,28 @@ function pickVoice(
   const norm = (s: string) => s.replace(/_/g, '-').toLowerCase()
   const target = norm(lang)
 
-  // Personality voices show "Name (Language (Region))" with ASCII parentheses.
+  const isGoogle      = (v: SpeechSynthesisVoice) => v.name.startsWith('Google')
   const isPersonality = (v: SpeechSynthesisVoice) => /\(.*\)/.test(v.name)
 
-  // 1. Classic voice, exact lang
-  const classicExact = voices.find(v => !isPersonality(v) && norm(v.lang) === target)
-  if (classicExact) return classicExact
+  // 1. Google voice, exact lang
+  const g = voices.find(v => isGoogle(v) && norm(v.lang) === target)
+  if (g) return g
 
-  // 2. Classic voice, prefix lang
-  const classicPrefix = voices.find(v => !isPersonality(v) && norm(v.lang).startsWith(target))
-  if (classicPrefix) return classicPrefix
+  // 2. Classic (non-personality) system voice, exact lang
+  const ce = voices.find(v => !isPersonality(v) && !isGoogle(v) && norm(v.lang) === target)
+  if (ce) return ce
 
-  // 3. Personality voice, exact lang (fallback — data may or may not be present)
-  const personalityExact = voices.find(v => norm(v.lang) === target)
-  if (personalityExact) return personalityExact
+  // 3. Classic system voice, prefix lang
+  const cp = voices.find(v => !isPersonality(v) && !isGoogle(v) && norm(v.lang).startsWith(target))
+  if (cp) return cp
 
-  // 4. Personality voice, prefix lang
-  const personalityPrefix = voices.find(v => norm(v.lang).startsWith(target))
-  if (personalityPrefix) return personalityPrefix
+  // 4. Personality voice, exact lang (may lack downloaded voice data)
+  const pe = voices.find(v => norm(v.lang) === target)
+  if (pe) return pe
+
+  // 5. Personality voice, prefix lang
+  const pp = voices.find(v => norm(v.lang).startsWith(target))
+  if (pp) return pp
 
   // No cross-dialect fallback
   return undefined
