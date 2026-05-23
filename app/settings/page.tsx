@@ -109,6 +109,12 @@ function VoiceDiagnostic() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [ready, setReady] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
+  const [storedJson, setStoredJson] = useState<string>('')
+
+  useEffect(() => {
+    // Show raw localStorage so we can see exactly what's saved
+    setStoredJson(localStorage.getItem('9upper-settings') ?? '(empty)')
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
@@ -168,6 +174,11 @@ function VoiceDiagnostic() {
       })}
 
       {/* Raw voice dump — helps diagnose unexpected lang codes */}
+      {/* Raw localStorage dump — pinpoints whether the saved voiceLang is wrong */}
+      <div className="rounded-xl px-4 py-3 border font-mono text-xs break-all" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
+        <span style={{ color: 'var(--color-primary)' }}>localStorage: </span>{storedJson}
+      </div>
+
       <button
         onClick={() => setShowRaw(v => !v)}
         className="text-xs text-left mt-1"

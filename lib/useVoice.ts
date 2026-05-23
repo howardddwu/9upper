@@ -77,6 +77,7 @@ export function useVoice(lang: VoiceLang = 'zh-TW') {
       const voice = pickVoice(voices, lang)
       if (voice) utterance.voice = voice   // explicit > lang-hint
 
+      console.log('[useVoice] speak', { lang, voices: voices.length, picked: voice?.name ?? 'none', pickedLang: voice?.lang ?? 'none' })
       window.speechSynthesis.speak(utterance)
     },
     [lang],
