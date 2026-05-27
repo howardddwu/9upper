@@ -37,7 +37,7 @@ const strings = {
       '老實人偷看謎底，其他人準備瞎掰',
       '所有玩家輪流解釋這個詞彙的意思',
       '想想根據大家的說法，說出老實人是誰',
-      '揭曉答案！猜對得 2 分，共 5 回合',
+      '揭曉答案！猜對得 2 分',
     ],
     howToPlaySelf: [
       '玩家自行分配角色（想想 × 1、老實人 × 1、其餘皆為瞎掰人）',
@@ -45,14 +45,14 @@ const strings = {
       '老實人點開謎底偷看，其他人準備瞎掰',
       '所有玩家輪流解釋這個詞彙的意思',
       '想想說出答案後，揭曉謎底確認結果',
-      '猜對得 2 分，共 5 回合，看誰最厲害！',
+      '猜對得 2 分，想玩多久就玩多久！',
     ],
 
     // nav
     startGame: '開始遊戲',
     backHome: '← 返回首頁',
     settings: '設定',
-    roundsNote: '共 5 回合',
+    roundsNote: '無限模式',
 
     // settings page
     settingsTitle: '設定',
@@ -101,6 +101,7 @@ const strings = {
     resultWrong: '被瞎掰人騙了！',
     resultCorrectNote: '本局得分：',
     nextRound: '下一回合 →',
+    endGame: '結束遊戲',
     viewResult: '查看最終結果 →',
     gameOver: '遊戲結束！',
     totalRounds: '共 {n} 回合',
@@ -145,7 +146,7 @@ const strings = {
       '老实人偷看谜底，其他人准备瞎掰',
       '所有玩家轮流解释这个词汇的意思',
       '想想根据大家的说法，说出老实人是谁',
-      '揭晓答案！猜对得 2 分，共 5 回合',
+      '揭晓答案！猜对得 2 分',
     ],
     howToPlaySelf: [
       '玩家自行分配角色（想想 × 1、老实人 × 1、其余皆为瞎掰人）',
@@ -153,13 +154,13 @@ const strings = {
       '老实人点开谜底偷看，其他人准备瞎掰',
       '所有玩家轮流解释这个词汇的意思',
       '想想说出答案后，揭晓谜底确认结果',
-      '猜对得 2 分，共 5 回合，看谁最厉害！',
+      '猜对得 2 分，想玩多久就玩多久！',
     ],
 
     startGame: '开始游戏',
     backHome: '← 返回首页',
     settings: '设置',
-    roundsNote: '共 5 回合',
+    roundsNote: '无限模式',
 
     settingsTitle: '设置',
     langLabel: '界面语言',
@@ -206,6 +207,7 @@ const strings = {
     resultWrong: '被瞎掰人骗了！',
     resultCorrectNote: '本局得分：',
     nextRound: '下一回合 →',
+    endGame: '结束游戏',
     viewResult: '查看最终结果 →',
     gameOver: '游戏结束！',
     totalRounds: '共 {n} 回合',

@@ -24,7 +24,6 @@ export interface AIPlayer {
 export interface GameState {
   phase: GamePhase
   round: number
-  maxRounds: number
   currentQuestion: Question | null
   players: AIPlayer[]
   humanVote: string | null

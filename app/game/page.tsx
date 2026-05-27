@@ -9,13 +9,10 @@ import { useSettings } from '@/lib/useSettings'
 import { t, tArr } from '@/lib/i18n'
 import { getVoiceScripts } from '@/lib/voiceScripts'
 
-const MAX_ROUNDS = 5
-
 function initState(): GameState {
   return {
     phase: 'home',
     round: 1,
-    maxRounds: MAX_ROUNDS,
     currentQuestion: null,
     players: [],
     humanVote: null,
@@ -27,11 +24,11 @@ function initState(): GameState {
 
 // ─── ScoreBar ─────────────────────────────────────────────────────────────────
 
-function ScoreBar({ round, maxRounds, score, lang }: { round: number; maxRounds: number; score: number; lang: import('@/lib/settings').UILang }) {
+function ScoreBar({ round, score, lang }: { round: number; score: number; lang: import('@/lib/settings').UILang }) {
   return (
     <div className="flex items-center justify-between text-sm mb-5">
       <span style={{ color: 'var(--color-muted)' }}>
-        第 {round} / {maxRounds} {t(lang, 'round')}
+        第 {round} {t(lang, 'round')}
       </span>
       <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{score} {t(lang, 'score')}</span>
     </div>
@@ -86,16 +83,23 @@ export default function GamePage() {
     speak(correct ? vs.resultCorrect() : vs.resultWrong())
   }, [speak, vs])
 
+  const endGame = useCallback(() => {
+    setState(s => ({ ...s, phase: 'game_over' }))
+    speak(vs.gameOver(state.score, state.round))
+  }, [state.score, state.round, speak, vs])
+
   const nextRound = useCallback(() => {
-    if (state.round >= state.maxRounds) {
+    // Auto-end if question bank exhausted
+    const remaining = getRandomQuestions(1, state.usedQuestionIds)
+    if (remaining.length === 0) {
       setState(s => ({ ...s, phase: 'game_over' }))
-      speak(vs.gameOver(state.score, state.maxRounds * 2))
+      speak(vs.gameOver(state.score, state.round))
     } else {
       const next = state.round + 1
       setState(s => ({ ...s, round: next, phase: 'home' }))
       speak(vs.nextRound(next))
     }
-  }, [state.round, state.maxRounds, state.score, speak, vs])
+  }, [state.usedQuestionIds, state.round, state.score, speak, vs])
 
   const restart = useCallback(() => {
     stop()
@@ -183,7 +187,7 @@ export default function GamePage() {
         {/* ── question_reveal ── */}
         {state.phase === 'question_reveal' && state.currentQuestion && (
           <div className="flex flex-col gap-4 animate-fade-in-up">
-            <ScoreBar round={state.round} maxRounds={state.maxRounds} score={state.score} lang={lang} />
+            <ScoreBar round={state.round} score={state.score} lang={lang} />
 
             <div className="rounded-2xl px-4 py-3 border text-sm text-center" style={{ background: 'rgba(168,218,220,0.08)', borderColor: 'var(--color-guesser)' }}>
               <span style={{ color: 'var(--color-guesser)' }}>{t(lang, 'stepGuesserClose')}</span>
@@ -231,7 +235,7 @@ export default function GamePage() {
         {/* ── explanations ── */}
         {state.phase === 'explanations' && state.currentQuestion && (
           <div className="flex flex-col gap-4 animate-fade-in-up">
-            <ScoreBar round={state.round} maxRounds={state.maxRounds} score={state.score} lang={lang} />
+            <ScoreBar round={state.round} score={state.score} lang={lang} />
             <div className="rounded-2xl p-5 border text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
               <div className="text-4xl mb-3">🗣️</div>
               <h2 className="text-xl font-black" style={{ color: 'var(--color-text)' }}>{t(lang, 'explainPhase')}</h2>
@@ -264,7 +268,7 @@ export default function GamePage() {
         {/* ── voting ── */}
         {state.phase === 'voting' && state.currentQuestion && (
           <div className="flex flex-col gap-4 animate-fade-in-up">
-            <ScoreBar round={state.round} maxRounds={state.maxRounds} score={state.score} lang={lang} />
+            <ScoreBar round={state.round} score={state.score} lang={lang} />
             {!answerRevealed ? (
               <>
                 <div className="text-center">
@@ -312,7 +316,7 @@ export default function GamePage() {
         {/* ── result ── */}
         {state.phase === 'result' && state.currentQuestion && (
           <div className="flex flex-col gap-4 animate-fade-in-up">
-            <ScoreBar round={state.round} maxRounds={state.maxRounds} score={state.score} lang={lang} />
+            <ScoreBar round={state.round} score={state.score} lang={lang} />
             <div className="rounded-2xl p-6 text-center border" style={{ background: state.roundResult === 'correct' ? 'rgba(46,204,113,0.1)' : 'rgba(230,57,70,0.1)', borderColor: state.roundResult === 'correct' ? 'var(--color-realupper)' : 'var(--color-nipper)' }}>
               <div className="text-5xl mb-3">{state.roundResult === 'correct' ? '🎉' : '😅'}</div>
               <h2 className="text-2xl font-black" style={{ color: state.roundResult === 'correct' ? 'var(--color-realupper)' : 'var(--color-nipper)' }}>
@@ -327,9 +331,14 @@ export default function GamePage() {
               <div className="font-bold mb-1" style={{ color: 'var(--color-text)' }}>{state.currentQuestion.term}</div>
               <p className="text-sm leading-6" style={{ color: 'var(--color-muted)' }}>{state.currentQuestion.correctAnswer}</p>
             </div>
-            <button onClick={nextRound} className="w-full py-4 rounded-2xl font-bold mt-1 transition-all active:scale-95" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>
-              {state.round >= state.maxRounds ? t(lang, 'viewResult') : t(lang, 'nextRound')}
-            </button>
+            <div className="flex flex-col gap-2 mt-1">
+              <button onClick={nextRound} className="w-full py-4 rounded-2xl font-bold transition-all active:scale-95" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>
+                {t(lang, 'nextRound')}
+              </button>
+              <button onClick={endGame} className="w-full py-3 rounded-2xl font-bold transition-all active:scale-95 border text-sm" style={{ background: 'transparent', borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
+                {t(lang, 'endGame')}
+              </button>
+            </div>
           </div>
         )}
 
@@ -339,11 +348,11 @@ export default function GamePage() {
             <div className="text-center">
               <div className="text-6xl mb-4">{state.score >= 8 ? '👑' : state.score >= 4 ? '🎊' : '🤔'}</div>
               <h2 className="text-3xl font-black" style={{ color: 'var(--color-text)' }}>{t(lang, 'gameOver')}</h2>
-              <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>{t(lang, 'totalRounds').replace('{n}', String(state.maxRounds))}</p>
+              <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>{t(lang, 'totalRounds').replace('{n}', String(state.round))}</p>
             </div>
             <div className="w-full rounded-3xl p-8 text-center border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
               <div className="text-6xl font-black" style={{ color: 'var(--color-primary)' }}>{state.score}</div>
-              <div className="text-sm mt-1" style={{ color: 'var(--color-muted)' }}>{t(lang, 'finalScore').replace('{n}', String(state.maxRounds * 2))}</div>
+              <div className="text-sm mt-1" style={{ color: 'var(--color-muted)' }}>{t(lang, 'finalScore').replace('{n}', String(state.round * 2))}</div>
               <div className="mt-4 font-bold" style={{ color: 'var(--color-text)' }}>
                 {tArr(lang, 'verdict')[state.score >= 8 ? 0 : state.score >= 6 ? 1 : state.score >= 4 ? 2 : 3]}
               </div>

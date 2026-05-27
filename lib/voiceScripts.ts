@@ -8,7 +8,7 @@ type Scripts = {
   resultCorrect: () => string
   resultWrong: () => string
   nextRound: (round: number) => string
-  gameOver: (score: number, maxScore: number) => string
+  gameOver: (score: number, rounds: number) => string
 }
 
 const mandarin_TW: Scripts = {
@@ -22,8 +22,8 @@ const mandarin_TW: Scripts = {
   resultCorrect: () => `恭喜！想想猜對了！想想和老實人各得兩分！`,
   resultWrong: () => `哎！想想被瞎掰人騙了！這次得分為零。`,
   nextRound: (round) => `第${round}回合即將開始！請準備好，翻開下一張題目卡！`,
-  gameOver: (score, maxScore) =>
-    `遊戲結束！總得分是${score}分，滿分${maxScore}分。感謝大家參與瞎掰王！`,
+  gameOver: (score, rounds) =>
+    `遊戲結束！共完成${rounds}回合，總得分是${score}分。感謝大家參與瞎掰王！`,
 }
 
 const mandarin_CN: Scripts = {
@@ -37,8 +37,8 @@ const mandarin_CN: Scripts = {
   resultCorrect: () => `恭喜！想想猜对了！想想和老实人各得两分！`,
   resultWrong: () => `哎！想想被瞎掰人骗了！这次得分为零。`,
   nextRound: (round) => `第${round}回合即将开始！请准备好，翻开下一张题目卡！`,
-  gameOver: (score, maxScore) =>
-    `游戏结束！总得分是${score}分，满分${maxScore}分。感谢大家参与瞎掰王！`,
+  gameOver: (score, rounds) =>
+    `游戏结束！共完成${rounds}回合，总得分是${score}分。感谢大家参与瞎掰王！`,
 }
 
 // Cantonese (粵語) — zh-HK
@@ -54,8 +54,8 @@ const cantonese: Scripts = {
   resultCorrect: () => `恭喜！諗樣估啱喇！諗樣同老實人各得兩分！`,
   resultWrong: () => `哎！諗樣畀瞎掰人呃咗！今次唔得分。`,
   nextRound: (round) => `第${round}局即將開始！準備好，翻開下一張題目卡！`,
-  gameOver: (score, maxScore) =>
-    `遊戲結束！總得分係${score}分，滿分${maxScore}分。多謝大家參與瞎掰王！`,
+  gameOver: (score, rounds) =>
+    `遊戲結束！完成咗${rounds}局，總得分係${score}分。多謝大家參與瞎掰王！`,
 }
 
 export function getVoiceScripts(lang: VoiceLang): Scripts {
