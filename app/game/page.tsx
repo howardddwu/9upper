@@ -78,6 +78,19 @@ export default function GamePage() {
     speak(correct ? vs.resultCorrect() : vs.resultWrong())
   }, [speak, vs])
 
+  const swapQuestion = useCallback(() => {
+    // Exclude used questions + current question so we never draw the same card again
+    const currentId = state.currentQuestion?.id
+    const excludeIds = currentId
+      ? [...state.usedQuestionIds, currentId]
+      : state.usedQuestionIds
+    const [newQuestion] = getRandomQuestions(1, excludeIds)
+    if (!newQuestion) return
+    setPeeked(false)
+    setState(s => ({ ...s, currentQuestion: newQuestion }))
+    speak(vs.startRound(newQuestion.term))
+  }, [state.usedQuestionIds, state.currentQuestion, speak, vs])
+
   const nextRound = useCallback(() => {
     const remaining = getRandomQuestions(1, state.usedQuestionIds)
     if (remaining.length === 0) {
@@ -235,9 +248,26 @@ export default function GamePage() {
               </div>
             </div>
 
-            <button onClick={goExplaining} className="w-full py-4 rounded-2xl font-bold transition-all active:scale-95 mt-1" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>
-              {t(lang, 'startExplaining')}
-            </button>
+            <div className="flex flex-col gap-2 mt-1">
+              <button onClick={goExplaining} className="w-full py-4 rounded-2xl font-bold transition-all active:scale-95" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>
+                {t(lang, 'startExplaining')}
+              </button>
+              {(() => {
+                const currentId = state.currentQuestion?.id
+                const excludeIds = currentId ? [...state.usedQuestionIds, currentId] : state.usedQuestionIds
+                const canSwap = getRandomQuestions(1, excludeIds).length > 0
+                return (
+                  <button
+                    onClick={swapQuestion}
+                    disabled={!canSwap}
+                    className="w-full py-3 rounded-2xl font-bold text-sm border transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)', background: 'transparent' }}
+                  >
+                    {canSwap ? `🔄 ${t(lang, 'swapQuestion')}` : t(lang, 'noMoreSwap')}
+                  </button>
+                )
+              })()}
+            </div>
           </div>
         )}
 
