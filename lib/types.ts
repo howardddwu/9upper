@@ -12,6 +12,8 @@ export interface Question {
   term: string
   correctAnswer: string
   category: string
+  difficulty: 1 | 2 | 3
+  hints: [string, string, string]
 }
 
 export interface AIPlayer {
@@ -23,11 +25,9 @@ export interface AIPlayer {
 
 export interface GameState {
   phase: GamePhase
-  round: number
   currentQuestion: Question | null
   players: AIPlayer[]
   humanVote: string | null
-  score: number
   roundResult: 'correct' | 'wrong' | null
   usedQuestionIds: string[]
 }

@@ -6,32 +6,28 @@ import { GameState } from '@/lib/types'
 import { getRandomQuestions } from '@/lib/questions'
 import { useVoice } from '@/lib/useVoice'
 import { useSettings } from '@/lib/useSettings'
-import { t, tArr } from '@/lib/i18n'
+import { t } from '@/lib/i18n'
 import { getVoiceScripts } from '@/lib/voiceScripts'
 
 function initState(): GameState {
   return {
     phase: 'home',
-    round: 1,
     currentQuestion: null,
     players: [],
     humanVote: null,
-    score: 0,
     roundResult: null,
     usedQuestionIds: [],
   }
 }
 
-// ─── ScoreBar ─────────────────────────────────────────────────────────────────
+// ─── Difficulty stars ──────────────────────────────────────────────────────────
 
-function ScoreBar({ round, score, lang }: { round: number; score: number; lang: import('@/lib/settings').UILang }) {
+function DifficultyStars({ level, lang }: { level: 1 | 2 | 3; lang: import('@/lib/settings').UILang }) {
+  const key = (`difficulty${level}`) as 'difficulty1' | 'difficulty2' | 'difficulty3'
   return (
-    <div className="flex items-center justify-between text-sm mb-5">
-      <span style={{ color: 'var(--color-muted)' }}>
-        第 {round} {t(lang, 'round')}
-      </span>
-      <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{score} {t(lang, 'score')}</span>
-    </div>
+    <span className="text-xs font-mono" style={{ color: 'var(--color-primary)', letterSpacing: '0.05em' }}>
+      {t(lang, key)}
+    </span>
   )
 }
 
@@ -53,8 +49,8 @@ export default function GamePage() {
     setPeeked(false)
     setAnswerRevealed(false)
     setState(s => ({ ...s, phase: 'question_reveal', currentQuestion: question, humanVote: null, roundResult: null }))
-    speak(vs.startRound(state.round, question.term))
-  }, [state.usedQuestionIds, state.round, speak, vs])
+    speak(vs.startRound(question.term))
+  }, [state.usedQuestionIds, speak, vs])
 
   const goExplaining = useCallback(() => {
     setState(s => ({ ...s, phase: 'explanations' }))
@@ -77,29 +73,21 @@ export default function GamePage() {
       ...s,
       phase: 'result',
       roundResult: correct ? 'correct' : 'wrong',
-      score: correct ? s.score + 2 : s.score,
       usedQuestionIds: s.currentQuestion ? [...s.usedQuestionIds, s.currentQuestion.id] : s.usedQuestionIds,
     }))
     speak(correct ? vs.resultCorrect() : vs.resultWrong())
   }, [speak, vs])
 
-  const endGame = useCallback(() => {
-    setState(s => ({ ...s, phase: 'game_over' }))
-    speak(vs.gameOver(state.score, state.round))
-  }, [state.score, state.round, speak, vs])
-
   const nextRound = useCallback(() => {
-    // Auto-end if question bank exhausted
     const remaining = getRandomQuestions(1, state.usedQuestionIds)
     if (remaining.length === 0) {
       setState(s => ({ ...s, phase: 'game_over' }))
-      speak(vs.gameOver(state.score, state.round))
+      speak(vs.gameOver())
     } else {
-      const next = state.round + 1
-      setState(s => ({ ...s, round: next, phase: 'home' }))
-      speak(vs.nextRound(next))
+      setState(s => ({ ...s, phase: 'home' }))
+      speak(vs.nextRound())
     }
-  }, [state.usedQuestionIds, state.round, state.score, speak, vs])
+  }, [state.usedQuestionIds, speak, vs])
 
   const restart = useCallback(() => {
     stop()
@@ -113,6 +101,8 @@ export default function GamePage() {
       </div>
     )
   }
+
+  const usedCount = state.usedQuestionIds.length
 
   return (
     <div className="min-h-svh flex flex-col items-center px-4 py-8" style={{ background: 'var(--bg-deep)' }}>
@@ -164,10 +154,12 @@ export default function GamePage() {
 
             <div className="text-center">
               <div className="text-5xl mb-3">🃏</div>
-              <h2 className="text-3xl font-black" style={{ color: 'var(--color-text)' }}>
-                第 {state.round} {t(lang, 'round')}
-              </h2>
               <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>{t(lang, 'readyFlip')}</p>
+              {usedCount > 0 && (
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-muted)', opacity: 0.6 }}>
+                  已玩 {usedCount} 題
+                </p>
+              )}
             </div>
 
             <button
@@ -177,17 +169,12 @@ export default function GamePage() {
             >
               {t(lang, 'flipCard')}
             </button>
-
-            <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-              {t(lang, 'currentScore')}：<span style={{ color: 'var(--color-primary)' }}>{state.score} {t(lang, 'score')}</span>
-            </p>
           </div>
         )}
 
         {/* ── question_reveal ── */}
         {state.phase === 'question_reveal' && state.currentQuestion && (
           <div className="flex flex-col gap-4 animate-fade-in-up">
-            <ScoreBar round={state.round} score={state.score} lang={lang} />
 
             <div className="rounded-2xl px-4 py-3 border text-sm text-center" style={{ background: 'rgba(168,218,220,0.08)', borderColor: 'var(--color-guesser)' }}>
               <span style={{ color: 'var(--color-guesser)' }}>{t(lang, 'stepGuesserClose')}</span>
@@ -198,14 +185,18 @@ export default function GamePage() {
             </div>
 
             <div className="rounded-3xl p-8 text-center border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
-              <div className="text-xs font-semibold tracking-widest mb-3" style={{ color: 'var(--color-primary)' }}>
-                {state.currentQuestion.category}
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <div className="text-xs font-semibold tracking-widest" style={{ color: 'var(--color-primary)' }}>
+                  {state.currentQuestion.category}
+                </div>
+                <DifficultyStars level={state.currentQuestion.difficulty} lang={lang} />
               </div>
               <h2 className="text-4xl font-black leading-tight" style={{ color: 'var(--color-text)' }}>
                 {state.currentQuestion.term}
               </h2>
             </div>
 
+            {/* 老實人 peek */}
             <div className="rounded-2xl border overflow-hidden" style={{ borderColor: peeked ? 'var(--color-realupper)' : 'var(--color-border)' }}>
               <button
                 onClick={() => setPeeked(v => !v)}
@@ -226,6 +217,24 @@ export default function GamePage() {
               )}
             </div>
 
+            {/* 瞎掰靈感 hints */}
+            <div className="rounded-2xl px-4 py-4 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: 'var(--color-nipper)' }}>
+                😈 {t(lang, 'hintsLabel')}
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {state.currentQuestion.hints.map((hint, i) => (
+                  <span
+                    key={i}
+                    className="px-3 py-1.5 rounded-full text-sm font-medium border"
+                    style={{ background: 'rgba(230,57,70,0.08)', borderColor: 'rgba(230,57,70,0.25)', color: 'var(--color-text)' }}
+                  >
+                    {hint}
+                  </span>
+                ))}
+              </div>
+            </div>
+
             <button onClick={goExplaining} className="w-full py-4 rounded-2xl font-bold transition-all active:scale-95 mt-1" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>
               {t(lang, 'startExplaining')}
             </button>
@@ -235,7 +244,6 @@ export default function GamePage() {
         {/* ── explanations ── */}
         {state.phase === 'explanations' && state.currentQuestion && (
           <div className="flex flex-col gap-4 animate-fade-in-up">
-            <ScoreBar round={state.round} score={state.score} lang={lang} />
             <div className="rounded-2xl p-5 border text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
               <div className="text-4xl mb-3">🗣️</div>
               <h2 className="text-xl font-black" style={{ color: 'var(--color-text)' }}>{t(lang, 'explainPhase')}</h2>
@@ -268,7 +276,6 @@ export default function GamePage() {
         {/* ── voting ── */}
         {state.phase === 'voting' && state.currentQuestion && (
           <div className="flex flex-col gap-4 animate-fade-in-up">
-            <ScoreBar round={state.round} score={state.score} lang={lang} />
             {!answerRevealed ? (
               <>
                 <div className="text-center">
@@ -300,12 +307,10 @@ export default function GamePage() {
                   <button onClick={() => recordResult(true)} className="py-5 rounded-2xl font-black text-lg transition-all active:scale-95 flex flex-col items-center gap-1" style={{ background: 'rgba(46,204,113,0.15)', border: '2px solid var(--color-realupper)', color: 'var(--color-realupper)' }}>
                     <span>✅</span>
                     <span className="text-sm">{t(lang, 'guessCorrect')}</span>
-                    <span className="text-xs font-normal opacity-70">{t(lang, 'pointsPlus')}</span>
                   </button>
                   <button onClick={() => recordResult(false)} className="py-5 rounded-2xl font-black text-lg transition-all active:scale-95 flex flex-col items-center gap-1" style={{ background: 'rgba(230,57,70,0.1)', border: '2px solid var(--color-nipper)', color: 'var(--color-nipper)' }}>
                     <span>❌</span>
                     <span className="text-sm">{t(lang, 'guessWrong')}</span>
-                    <span className="text-xs font-normal opacity-70">{t(lang, 'pointsZero')}</span>
                   </button>
                 </div>
               </>
@@ -316,46 +321,37 @@ export default function GamePage() {
         {/* ── result ── */}
         {state.phase === 'result' && state.currentQuestion && (
           <div className="flex flex-col gap-4 animate-fade-in-up">
-            <ScoreBar round={state.round} score={state.score} lang={lang} />
             <div className="rounded-2xl p-6 text-center border" style={{ background: state.roundResult === 'correct' ? 'rgba(46,204,113,0.1)' : 'rgba(230,57,70,0.1)', borderColor: state.roundResult === 'correct' ? 'var(--color-realupper)' : 'var(--color-nipper)' }}>
               <div className="text-5xl mb-3">{state.roundResult === 'correct' ? '🎉' : '😅'}</div>
               <h2 className="text-2xl font-black" style={{ color: state.roundResult === 'correct' ? 'var(--color-realupper)' : 'var(--color-nipper)' }}>
                 {t(lang, state.roundResult === 'correct' ? 'resultCorrect' : 'resultWrong')}
               </h2>
-              <p className="text-sm mt-2" style={{ color: 'var(--color-muted)' }}>
-                {t(lang, 'resultCorrectNote')}<span style={{ color: 'var(--color-primary)' }}> {state.score} {t(lang, 'score')}</span>
-              </p>
             </div>
             <div className="rounded-2xl p-4 border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
               <div className="text-xs mb-1" style={{ color: 'var(--color-primary)' }}>{t(lang, 'correctAnswer')}</div>
               <div className="font-bold mb-1" style={{ color: 'var(--color-text)' }}>{state.currentQuestion.term}</div>
               <p className="text-sm leading-6" style={{ color: 'var(--color-muted)' }}>{state.currentQuestion.correctAnswer}</p>
             </div>
-            <div className="flex flex-col gap-2 mt-1">
-              <button onClick={nextRound} className="w-full py-4 rounded-2xl font-bold transition-all active:scale-95" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>
+            <div className="flex flex-col gap-2">
+              <button onClick={nextRound} className="w-full py-4 rounded-2xl font-black text-lg transition-all active:scale-95" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>
                 {t(lang, 'nextRound')}
               </button>
-              <button onClick={endGame} className="w-full py-3 rounded-2xl font-bold transition-all active:scale-95 border text-sm" style={{ background: 'transparent', borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
-                {t(lang, 'endGame')}
-              </button>
+              <Link href="/" className="w-full py-3 rounded-2xl font-bold text-center border text-sm transition-all active:scale-95" style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
+                {t(lang, 'backHome')}
+              </Link>
             </div>
           </div>
         )}
 
-        {/* ── game_over ── */}
+        {/* ── game_over (questions exhausted) ── */}
         {state.phase === 'game_over' && (
           <div className="flex flex-col items-center justify-center min-h-[80svh] gap-6 animate-fade-in-up">
             <div className="text-center">
-              <div className="text-6xl mb-4">{state.score >= 8 ? '👑' : state.score >= 4 ? '🎊' : '🤔'}</div>
+              <div className="text-6xl mb-4">🎊</div>
               <h2 className="text-3xl font-black" style={{ color: 'var(--color-text)' }}>{t(lang, 'gameOver')}</h2>
-              <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>{t(lang, 'totalRounds').replace('{n}', String(state.round))}</p>
-            </div>
-            <div className="w-full rounded-3xl p-8 text-center border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
-              <div className="text-6xl font-black" style={{ color: 'var(--color-primary)' }}>{state.score}</div>
-              <div className="text-sm mt-1" style={{ color: 'var(--color-muted)' }}>{t(lang, 'finalScore').replace('{n}', String(state.round * 2))}</div>
-              <div className="mt-4 font-bold" style={{ color: 'var(--color-text)' }}>
-                {tArr(lang, 'verdict')[state.score >= 8 ? 0 : state.score >= 6 ? 1 : state.score >= 4 ? 2 : 3]}
-              </div>
+              <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>
+                共玩了 {usedCount} 題
+              </p>
             </div>
             <div className="w-full flex flex-col gap-3">
               <button onClick={restart} className="w-full py-4 rounded-2xl font-bold transition-all active:scale-95" style={{ background: 'var(--color-primary)', color: '#0f0e17' }}>

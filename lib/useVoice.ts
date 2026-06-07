@@ -59,8 +59,8 @@ function pickVoice(
 }
 
 export function useVoice(lang: VoiceLang = 'zh-TW') {
-  const [isMuted, setIsMuted] = useState(false)
-  const isMutedRef = useRef(false)
+  const [isMuted, setIsMuted] = useState(true)
+  const isMutedRef = useRef(true)
 
   // Kept in a ref so speak() always sees the latest list without re-creating.
   const voicesRef = useRef<SpeechSynthesisVoice[]>([])

@@ -5,7 +5,7 @@ import { useSettings } from '@/lib/useSettings'
 import { t, tArr } from '@/lib/i18n'
 
 export default function Home() {
-  const { settings, loaded } = useSettings()
+  const { settings, update, loaded } = useSettings()
   const lang = settings.uiLang
   const isSelf = settings.mode === 'self'
 
@@ -57,10 +57,9 @@ export default function Home() {
               { mode: 'online', label: t(lang, 'modeOnline'), desc: t(lang, 'modeOnlineDesc'), disabled: true },
             ] as const
           ).map(item => (
-            <Link
+            <div
               key={item.mode}
-              href={item.disabled ? '#' : '/settings'}
-              onClick={e => item.disabled && e.preventDefault()}
+              onClick={() => !item.disabled && update({ mode: item.mode })}
               className="rounded-2xl p-4 border flex flex-col gap-1 transition-all"
               style={{
                 background: settings.mode === item.mode ? 'rgba(244,162,97,0.12)' : 'var(--bg-card)',
@@ -80,7 +79,7 @@ export default function Home() {
                 )}
               </div>
               <p className="text-xs leading-4" style={{ color: 'var(--color-muted)' }}>{item.desc}</p>
-            </Link>
+            </div>
           ))}
         </div>
 
