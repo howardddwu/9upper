@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Noto_Sans_TC } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const notoSansTC = Noto_Sans_TC({
@@ -24,7 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-Hant" className={`${notoSansTC.variable} h-full`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <Analytics />
+      </body>
     </html>
   )
 }
