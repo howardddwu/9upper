@@ -45,11 +45,15 @@ function FeedbackDrawer() {
 
   return (
     <>
-      {/* Trigger */}
+      {/* Floating Action Button */}
       <button
         onClick={() => setOpen(true)}
-        className="text-xs underline underline-offset-2 transition-opacity hover:opacity-70"
-        style={{ color: 'var(--color-muted)', opacity: 0.45 }}
+        className="fixed bottom-6 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full font-bold text-sm transition-all active:scale-95 hover:scale-105"
+        style={{
+          background: 'var(--color-primary)',
+          color: '#0f0e17',
+          boxShadow: '0 4px 20px rgba(244,162,97,0.45)',
+        }}
       >
         💬 回饋
       </button>
@@ -60,25 +64,25 @@ function FeedbackDrawer() {
           {/* backdrop */}
           <div
             className="absolute inset-0"
-            style={{ background: 'rgba(0,0,0,0.6)' }}
+            style={{ background: 'rgba(0,0,0,0.65)' }}
             onClick={reset}
           />
 
           {/* drawer */}
           <div
-            className="relative z-10 rounded-t-3xl px-6 pt-5 pb-10 flex flex-col gap-5 animate-slide-up"
-            style={{ background: 'var(--bg-card)', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }}
+            className="relative z-10 rounded-t-3xl px-6 pt-6 pb-10 flex flex-col gap-5 animate-slide-up"
+            style={{ background: '#232136', boxShadow: '0 -8px 40px rgba(0,0,0,0.6)' }}
           >
             {status === 'done' ? (
               /* ── Success ── */
               <div className="py-8 flex flex-col items-center gap-3 animate-fade-in-up">
                 <div className="text-5xl">🙏</div>
-                <p className="font-bold text-lg" style={{ color: 'var(--color-text)' }}>謝謝你的回饋！</p>
-                <p className="text-sm" style={{ color: 'var(--color-muted)' }}>你的意見幫助瞎掰王變得更好</p>
+                <p className="font-bold text-lg" style={{ color: '#fffffe' }}>謝謝你的回饋！</p>
+                <p className="text-sm" style={{ color: '#c4c6d8' }}>你的意見幫助瞎掰王變得更好</p>
                 <button
                   onClick={reset}
                   className="mt-3 px-6 py-2 rounded-full text-sm font-bold border transition-all active:scale-95"
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
+                  style={{ borderColor: 'rgba(255,255,255,0.2)', color: '#c4c6d8' }}
                 >
                   關閉
                 </button>
@@ -88,13 +92,13 @@ function FeedbackDrawer() {
               <>
                 {/* header */}
                 <div className="flex items-center justify-between">
-                  <h3 className="font-black text-lg" style={{ color: 'var(--color-text)' }}>
+                  <h3 className="font-black text-xl" style={{ color: '#fffffe' }}>
                     這次玩得怎麼樣？
                   </h3>
                   <button
                     onClick={reset}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-lg transition-colors"
-                    style={{ color: 'var(--color-muted)', background: 'var(--bg-deep)' }}
+                    className="w-9 h-9 flex items-center justify-center rounded-full text-xl font-light transition-colors"
+                    style={{ color: '#c4c6d8', background: 'rgba(255,255,255,0.08)' }}
                   >
                     ×
                   </button>
@@ -108,9 +112,9 @@ function FeedbackDrawer() {
                       onClick={() => setRating(i)}
                       className="flex-1 py-3 rounded-2xl text-2xl transition-all active:scale-90"
                       style={{
-                        background: rating === i ? 'rgba(244,162,97,0.2)' : 'var(--bg-deep)',
-                        border: `2px solid ${rating === i ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                        transform: rating === i ? 'scale(1.08)' : 'scale(1)',
+                        background: rating === i ? 'rgba(244,162,97,0.25)' : 'rgba(255,255,255,0.06)',
+                        border: `2px solid ${rating === i ? 'var(--color-primary)' : 'rgba(255,255,255,0.15)'}`,
+                        transform: rating === i ? 'scale(1.1)' : 'scale(1)',
                       }}
                     >
                       {e}
@@ -118,17 +122,22 @@ function FeedbackDrawer() {
                   ))}
                 </div>
 
+                {/* hint below emojis */}
+                <p className="text-xs text-center -mt-2" style={{ color: '#c4c6d8' }}>
+                  {rating === null ? '選一個表情評分' : ['很無聊', '還可以', '不錯啊', '很好玩', '超好玩！'][rating]}
+                </p>
+
                 {/* comment textarea */}
                 <textarea
                   value={comment}
                   onChange={e => setComment(e.target.value)}
                   placeholder="有什麼想說的？（選填）"
                   rows={3}
-                  className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none transition-colors"
+                  className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none"
                   style={{
-                    background: 'var(--bg-deep)',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-text)',
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1.5px solid rgba(255,255,255,0.2)',
+                    color: '#fffffe',
                   }}
                 />
 
@@ -136,7 +145,7 @@ function FeedbackDrawer() {
                 <button
                   onClick={submit}
                   disabled={rating === null || status === 'submitting'}
-                  className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed"
                   style={{ background: 'var(--color-primary)', color: '#0f0e17' }}
                 >
                   {status === 'submitting' ? '送出中…' : '送出回饋'}
@@ -283,21 +292,20 @@ export default function Home() {
         </p>
 
         {/* Footer */}
-        <div className="flex items-center gap-3" style={{ opacity: 0.45 }}>
-          <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-            © 2026 Made by{' '}
-            <a
-              href="https://www.linkedin.com/in/howardddwu1920441b6/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2 hover:opacity-80 transition-opacity"
-            >
-              @howardddwu
-            </a>
-          </p>
-          <span style={{ color: 'var(--color-border)' }}>·</span>
-          <FeedbackDrawer />
-        </div>
+        <p className="text-xs" style={{ color: 'var(--color-muted)', opacity: 0.45 }}>
+          © 2026 Made by{' '}
+          <a
+            href="https://www.linkedin.com/in/howardddwu1920441b6/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+          >
+            @howardddwu
+          </a>
+        </p>
+
+        {/* Floating feedback button — rendered outside scroll container */}
+        <FeedbackDrawer />
 
       </div>
     </div>
