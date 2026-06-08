@@ -198,10 +198,7 @@ export default function GamePage() {
             </div>
 
             <div className="rounded-3xl p-8 text-center border" style={{ background: 'var(--bg-card)', borderColor: 'var(--color-border)' }}>
-              <div className="flex items-center justify-center gap-2 mb-3">
-                <div className="text-xs font-semibold tracking-widest" style={{ color: 'var(--color-primary)' }}>
-                  {state.currentQuestion.category}
-                </div>
+              <div className="flex items-center justify-center mb-3">
                 <DifficultyStars level={state.currentQuestion.difficulty} lang={lang} />
               </div>
               <h2 className="text-4xl font-black leading-tight" style={{ color: 'var(--color-text)' }}>
