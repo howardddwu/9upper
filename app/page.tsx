@@ -30,7 +30,7 @@ function FeedbackDrawer() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
-          access_key: process.env.NEXT_PUBLIC_WEB3FORMS_KEY ?? '',
+          access_key: '20617a78-8114-47e7-b661-ac97734b1a01',
           subject: '瞎掰王 玩家回饋',
           rating: EMOJIS[rating],
           message: comment || '（未填寫）',
