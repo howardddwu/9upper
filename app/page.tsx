@@ -130,7 +130,7 @@ export default function Home() {
 
         {/* Footer */}
         <p className="text-xs" style={{ color: 'var(--color-muted)', opacity: 0.45 }}>
-          Made by{' '}
+          © 2026 Made by{' '}
           <a
             href="https://www.linkedin.com/in/howardddwu1920441b6/"
             target="_blank"
