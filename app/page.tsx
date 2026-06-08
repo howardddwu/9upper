@@ -127,6 +127,19 @@ export default function Home() {
         <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
           {t(lang, 'roundsNote')} · {t(lang, isSelf ? 'modeSelf' : 'modeOnline')}
         </p>
+
+        {/* Footer */}
+        <p className="text-xs" style={{ color: 'var(--color-muted)', opacity: 0.45 }}>
+          Made by{' '}
+          <a
+            href="https://www.linkedin.com/in/howardddwu1920441b6/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+          >
+            @howardddwu
+          </a>
+        </p>
       </div>
     </div>
   )
